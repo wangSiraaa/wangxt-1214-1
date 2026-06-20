@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: ${PROJECT_NAME}-mongodb
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT}:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: battery_recycle
+    volumes:
+      - mongodb_data:/data/db
+    command: mongod --auth
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ${PROJECT_NAME}-postgres
+    restart: unless-stopped
+    ports:
+      - "23514:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: battery_audit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}-backend
+    restart: unless-stopped
+    ports:
+      - "${API_PORT}:3000"
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/battery_recycle?authSource=admin
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: battery_audit
+    depends_on:
+      - mongodb
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}-frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT}:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:${API_PORT}
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  mongodb_data:
+  postgres_data:
