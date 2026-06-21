@@ -76,6 +76,9 @@ export class SaleOrder {
 
   @Prop({ type: Object })
   extra?: Record<string, any>;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const SaleOrderSchema = SchemaFactory.createForClass(SaleOrder);

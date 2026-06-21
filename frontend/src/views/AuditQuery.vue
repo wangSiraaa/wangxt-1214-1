@@ -1,11 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { TabView, TabPanel } from 'primevue/tabview'
-import { DataTable } from 'primevue/datatable'
-import { Column } from 'primevue/column'
-import { InputText } from 'primevue/inputtext'
-import { Button } from 'primevue/button'
-import { Dropdown } from 'primevue/dropdown'
 import { getBatteryAuditList, getFlowEventAuditList } from '@/api/flow'
 
 const activeIndex = ref(0)
@@ -191,7 +185,7 @@ function formatDate(date: any): string {
       关键状态变化同步写入 PostgreSQL 审计索引，用于审计追溯和快速查询
     </p>
 
-    <TabView :activeIndex="activeIndex" @tab-change="onTabChange">
+    <TabView v-model:activeIndex="activeIndex" @tab-change="onTabChange">
       <TabPanel header="电池包状态索引">
         <div class="filter-bar" style="margin-top: 16px">
           <div>
@@ -222,7 +216,7 @@ function formatDate(date: any): string {
           :rows="batterySearch.pageSize"
           :totalRecords="batteryTotal"
           :loading="batteryLoading"
-          (onPage)="onBatteryPageChange($event)"
+          @page="onBatteryPageChange($event)"
           :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           :rowsPerPageOptions="[10, 20, 50, 100]"
@@ -285,7 +279,7 @@ function formatDate(date: any): string {
           :rows="eventSearch.pageSize"
           :totalRecords="eventTotal"
           :loading="eventLoading"
-          (onPage)="onEventPageChange($event)"
+          @page="onEventPageChange($event)"
           :lazy="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           :rowsPerPageOptions="[10, 20, 50, 100]"

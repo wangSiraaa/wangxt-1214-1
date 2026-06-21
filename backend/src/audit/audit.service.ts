@@ -39,7 +39,7 @@ export class AuditService {
       saleDate: battery.saleDate || null,
       isInspectionLocked: battery.isInspectionLocked,
       lastOperator: battery.updatedAt ? 'system' : null,
-      lastOperationTime: battery.updatedAt ? new Date(battery.updatedAt as any) : null,
+      lastOperationTime: battery.updatedAt ? new Date(battery.updatedAt) : null,
     };
 
     if (existing) {

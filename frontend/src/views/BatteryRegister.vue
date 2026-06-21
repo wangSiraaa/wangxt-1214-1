@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { InputText } from 'primevue/inputtext'
-import { InputNumber } from 'primevue/inputnumber'
-import { Button } from 'primevue/button'
-import { MessageService } from 'primevue/api'
 import { registerBattery } from '@/api/battery'
 
 const router = useRouter()

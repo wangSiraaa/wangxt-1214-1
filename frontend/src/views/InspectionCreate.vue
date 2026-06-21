@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { InputText } from 'primevue/inputtext'
-import { InputNumber } from 'primevue/inputnumber'
-import { Button } from 'primevue/button'
-import { Dropdown } from 'primevue/dropdown'
-import { Textarea } from 'primevue/textarea'
 import { createInspection, getInspectionsByBattery } from '@/api/inspection'
 import { getBatteryByCode } from '@/api/battery'
 

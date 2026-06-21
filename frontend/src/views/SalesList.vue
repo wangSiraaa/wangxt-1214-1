@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { DataTable } from 'primevue/datatable'
-import { Column } from 'primevue/column'
-import { InputText } from 'primevue/inputtext'
-import { Button } from 'primevue/button'
-import { Dropdown } from 'primevue/dropdown'
 import { getSaleOrderList, confirmSaleOrder, shipSaleOrder, cancelSaleOrder, completeSaleOrder } from '@/api/sales'
 import type { SaleOrder } from '@/api/sales'
 
@@ -208,7 +203,7 @@ async function handleCancel(id: string) {
       :rows="searchParams.pageSize"
       :totalRecords="total"
       :loading="loading"
-      (onPage)="onPageChange($event)"
+      @page="onPageChange($event)"
       :lazy="true"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[10, 20, 50, 100]"

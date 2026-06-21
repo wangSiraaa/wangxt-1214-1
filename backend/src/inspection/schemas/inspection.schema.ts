@@ -74,6 +74,9 @@ export class Inspection {
 
   @Prop({ type: Object })
   extra?: Record<string, any>;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const InspectionSchema = SchemaFactory.createForClass(Inspection);

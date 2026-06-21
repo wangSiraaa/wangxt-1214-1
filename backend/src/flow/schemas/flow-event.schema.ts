@@ -54,6 +54,9 @@ export class FlowEvent {
 
   @Prop()
   auditSyncTime?: Date;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const FlowEventSchema = SchemaFactory.createForClass(FlowEvent);

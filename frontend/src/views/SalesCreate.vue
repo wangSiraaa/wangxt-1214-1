@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { InputText } from 'primevue/inputtext'
-import { InputNumber } from 'primevue/inputnumber'
-import { Button } from 'primevue/button'
-import { Dropdown } from 'primevue/dropdown'
-import { DataTable } from 'primevue/datatable'
-import { Column } from 'primevue/column'
 import { createSaleOrder, getCascadePurposes, getAvailableBatteries } from '@/api/sales'
 import type { SaleOrder } from '@/api/sales'
 
@@ -63,6 +57,10 @@ const selectedBatteryCodes = computed(() => {
 
 function onBatterySelectionChange(event: any) {
   form.value.batteryIds = event.value.map((b: any) => b._id)
+}
+
+function isRowDisabled(data: any): boolean {
+  return data._disabled
 }
 
 function isBatteryUsableForPurpose(battery: any, purpose: string): boolean {
@@ -214,11 +212,11 @@ function getSafetyLevelClass(level: string): string {
         <DataTable
           :value="filteredBatteries"
           :loading="loadingBatteries"
-          :selection="selectedBatteries"
+          v-model:selection="selectedBatteries"
           selectionMode="multiple"
           @selection-change="onBatterySelectionChange"
           dataKey="_id"
-          :rowDisabled="'_disabled'"
+          :rowDisabled="isRowDisabled"
           :rows="10"
           :paginator="true"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"

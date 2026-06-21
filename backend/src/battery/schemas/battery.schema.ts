@@ -94,6 +94,9 @@ export class Battery {
 
   @Prop({ type: Object })
   extra?: Record<string, any>;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const BatterySchema = SchemaFactory.createForClass(Battery);
