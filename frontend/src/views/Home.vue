@@ -21,6 +21,7 @@ async function loadStatistics() {
 
 const statCards = [
   { key: 'total', label: '电池包总数', icon: 'pi pi-box', color: '#3b82f6' },
+  { key: 'pendingVin', label: 'VIN待补录', icon: 'pi pi-exclamation-triangle', color: '#f97316' },
   { key: 'registered', label: '待检测', icon: 'pi pi-clock', color: '#f59e0b' },
   { key: 'qualified', label: '合格待售', icon: 'pi pi-check-circle', color: '#10b981' },
   { key: 'sold', label: '已销售', icon: 'pi pi-shopping-cart', color: '#8b5cf6' },
@@ -94,13 +95,25 @@ function goTo(path: string) {
         <div
           style="
             padding: 12px 20px;
+            background: #ffedd5;
+            color: #c2410c;
+            border-radius: 6px;
+            font-weight: 500;
+          "
+        >
+          入厂登记（VIN待补录）
+        </div>
+        <i class="pi pi-arrow-right" style="color: #94a3b8"></i>
+        <div
+          style="
+            padding: 12px 20px;
             background: #dbeafe;
             color: #1d4ed8;
             border-radius: 6px;
             font-weight: 500;
           "
         >
-          入厂登记
+          VIN补录完成
         </div>
         <i class="pi pi-arrow-right" style="color: #94a3b8"></i>
         <div
@@ -154,7 +167,8 @@ function goTo(path: string) {
       <div style="margin-top: 16px; color: #64748b; font-size: 13px">
         <p><strong>业务规则：</strong></p>
         <ul style="margin-top: 8px; padding-left: 20px">
-          <li>VIN码不完整的电池包不能入库登记</li>
+          <li>VIN码不完整时，可先保存为"待补录VIN"状态，后续补录后再继续流转</li>
+          <li>待补录VIN的电池包不能进行安全分级检测，也不能用于梯次销售</li>
           <li>安全等级A/B级为合格，可进行梯次利用；C/D级为不合格，转拆解路线</li>
           <li>销售人员只能选择合规的梯次用途销售合格电池包</li>
           <li>已进入梯次出库的电池包不能再修改检测结论</li>

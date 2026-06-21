@@ -3,7 +3,7 @@ import api from './index'
 export interface Battery {
   _id?: string
   batteryCode: string
-  vin: string
+  vin?: string
   vehiclePlate?: string
   vehicleModel?: string
   batteryModel?: string
@@ -31,7 +31,8 @@ export interface Battery {
 
 export interface RegisterBatteryDto {
   batteryCode: string
-  vin: string
+  vin?: string
+  saveMode?: 'register' | 'pending_vin'
   vehiclePlate?: string
   vehicleModel?: string
   batteryModel?: string
@@ -42,6 +43,10 @@ export interface RegisterBatteryDto {
   packageCount?: number
   weight?: number
   remark?: string
+}
+
+export interface SupplementVinDto {
+  vin: string
 }
 
 export function getBatteryList(params: {
@@ -67,6 +72,10 @@ export function getBatteryByCode(code: string) {
 
 export function registerBattery(dto: RegisterBatteryDto) {
   return api.post<{ code: number; message: string; data: Battery }>('/battery/register', dto)
+}
+
+export function supplementVin(id: string, dto: SupplementVinDto) {
+  return api.post<{ code: number; message: string; data: Battery }>(`/battery/${id}/supplement-vin`, dto)
 }
 
 export function updateBattery(id: string, dto: Partial<Battery>) {

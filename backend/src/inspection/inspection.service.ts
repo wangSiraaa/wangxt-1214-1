@@ -18,6 +18,10 @@ export class InspectionService {
   async create(dto: CreateInspectionDto, operator: string): Promise<InspectionDocument> {
     const battery = await this.batteryService.findById(dto.batteryId);
 
+    if (battery.status === BatteryStatus.PENDING_VIN) {
+      throw new BadRequestException('该电池包VIN待补录，需先补录VIN才能进行安全分级检测');
+    }
+
     if (battery.isInspectionLocked) {
       throw new BadRequestException('该电池包已进入梯次出库，不能再录入或修改检测结论');
     }
@@ -72,6 +76,11 @@ export class InspectionService {
     }
 
     const battery = await this.batteryService.findById(inspection.batteryId.toString());
+
+    if (battery.status === BatteryStatus.PENDING_VIN) {
+      throw new BadRequestException('该电池包VIN待补录，需先补录VIN才能进行安全分级检测');
+    }
+
     if (battery.isInspectionLocked) {
       throw new BadRequestException('该电池包已进入梯次出库，不能修改检测结论');
     }

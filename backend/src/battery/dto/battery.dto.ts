@@ -1,13 +1,22 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDate, IsEnum } from 'class-validator';
+
+export enum SaveMode {
+  REGISTER = 'register',
+  PENDING_VIN = 'pending_vin',
+}
 
 export class RegisterBatteryDto {
   @IsString()
   @IsNotEmpty({ message: '电池包编号不能为空' })
   batteryCode: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'VIN码不能为空' })
-  vin: string;
+  vin?: string;
+
+  @IsOptional()
+  @IsEnum(SaveMode, { message: '保存模式无效' })
+  saveMode?: SaveMode;
 
   @IsOptional()
   @IsString()
@@ -49,7 +58,17 @@ export class RegisterBatteryDto {
   remark?: string;
 }
 
+export class SupplementVinDto {
+  @IsString()
+  @IsNotEmpty({ message: 'VIN码不能为空' })
+  vin: string;
+}
+
 export class UpdateBatteryDto {
+  @IsOptional()
+  @IsString()
+  vin?: string;
+
   @IsOptional()
   @IsString()
   vehiclePlate?: string;

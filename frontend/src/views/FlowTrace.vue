@@ -18,6 +18,7 @@ const searchParams = ref({
 const eventTypeOptions = [
   { label: '全部', value: '' },
   { label: '入厂登记', value: 'register' },
+  { label: 'VIN补录', value: 'vin_supplement' },
   { label: '检测开始', value: 'inspection_start' },
   { label: '检测完成', value: 'inspection_complete' },
   { label: '检测合格', value: 'qualified' },
@@ -72,6 +73,7 @@ function onPageChange(event: any) {
 function getEventTypeLabel(type: string): string {
   const map: Record<string, string> = {
     register: '入厂登记',
+    vin_supplement: 'VIN补录',
     inspection_start: '检测开始',
     inspection_complete: '检测完成',
     qualified: '检测合格',
@@ -89,6 +91,7 @@ function getEventTypeLabel(type: string): string {
 function getEventClass(type: string): string {
   const classMap: Record<string, string> = {
     register: 'status-tag status-registered',
+    vin_supplement: 'status-tag status-pending_vin',
     inspection_start: 'status-tag status-inspecting',
     inspection_complete: 'status-tag status-qualified',
     qualified: 'status-tag status-qualified',
@@ -101,6 +104,21 @@ function getEventClass(type: string): string {
     lock_inspection: 'status-tag status-unqualified',
   }
   return classMap[type] || 'status-tag'
+}
+
+function getStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    pending_vin: '待补录VIN',
+    registered: '待检测',
+    inspecting: '检测中',
+    qualified: '合格',
+    unqualified: '不合格',
+    for_sale: '待售',
+    sold: '已销售',
+    shipped: '已发货',
+    disassembling: '拆解中',
+  }
+  return map[status] || status
 }
 
 function formatDate(date: any): string {
@@ -153,15 +171,15 @@ function formatDate(date: any): string {
           </span>
         </template>
       </Column>
-      <Column field="fromStatus" header="原状态" style="width: 100px">
+      <Column field="fromStatus" header="原状态" style="width: 120px">
         <template #body="slotProps">
-          <span v-if="slotProps.data.fromStatus">{{ slotProps.data.fromStatus }}</span>
+          <span v-if="slotProps.data.fromStatus">{{ getStatusLabel(slotProps.data.fromStatus) }}</span>
           <span v-else style="color: #94a3b8">-</span>
         </template>
       </Column>
-      <Column field="toStatus" header="目标状态" style="width: 100px">
+      <Column field="toStatus" header="目标状态" style="width: 120px">
         <template #body="slotProps">
-          <span v-if="slotProps.data.toStatus">{{ slotProps.data.toStatus }}</span>
+          <span v-if="slotProps.data.toStatus">{{ getStatusLabel(slotProps.data.toStatus) }}</span>
           <span v-else style="color: #94a3b8">-</span>
         </template>
       </Column>

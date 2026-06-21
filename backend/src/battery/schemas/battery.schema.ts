@@ -4,6 +4,7 @@ import { Document } from 'mongoose';
 export type BatteryDocument = Battery & Document;
 
 export enum BatteryStatus {
+  PENDING_VIN = 'pending_vin',
   REGISTERED = 'registered',
   INSPECTING = 'inspecting',
   QUALIFIED = 'qualified',
@@ -26,8 +27,8 @@ export class Battery {
   @Prop({ required: true, unique: true, index: true })
   batteryCode: string;
 
-  @Prop({ required: true })
-  vin: string;
+  @Prop()
+  vin?: string;
 
   @Prop()
   vehiclePlate?: string;

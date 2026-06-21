@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
 import { BatteryService } from './battery.service';
-import { RegisterBatteryDto, UpdateBatteryDto, QueryBatteryDto } from './dto/battery.dto';
+import { RegisterBatteryDto, UpdateBatteryDto, QueryBatteryDto, SupplementVinDto } from './dto/battery.dto';
 
 @Controller('battery')
 export class BatteryController {
@@ -12,7 +12,18 @@ export class BatteryController {
     const result = await this.batteryService.register(dto, operator);
     return {
       code: 0,
-      message: '登记成功',
+      message: dto.saveMode === 'pending_vin' ? '已保存为待补录状态' : '登记成功',
+      data: result,
+    };
+  }
+
+  @Post(':id/supplement-vin')
+  async supplementVin(@Param('id') id: string, @Body() dto: SupplementVinDto) {
+    const operator = 'system';
+    const result = await this.batteryService.supplementVin(id, dto, operator);
+    return {
+      code: 0,
+      message: 'VIN补录成功',
       data: result,
     };
   }

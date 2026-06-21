@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef 
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Battery, BatteryDocument, BatteryStatus, SafetyLevel } from './schemas/battery.schema';
-import { RegisterBatteryDto, UpdateBatteryDto, QueryBatteryDto } from './dto/battery.dto';
+import { RegisterBatteryDto, UpdateBatteryDto, QueryBatteryDto, SupplementVinDto, SaveMode } from './dto/battery.dto';
 import { FlowService } from '../flow/flow.service';
 import { FlowEventType } from '../flow/schemas/flow-event.schema';
 import { AuditService } from '../audit/audit.service';
@@ -18,7 +18,9 @@ export class BatteryService {
   ) {}
 
   async register(dto: RegisterBatteryDto, operator: string): Promise<BatteryDocument> {
-    if (!dto.vin || dto.vin.length < 17) {
+    const isPendingVin = dto.saveMode === SaveMode.PENDING_VIN || !dto.vin;
+
+    if (!isPendingVin && (!dto.vin || dto.vin.length < 17)) {
       throw new BadRequestException('VIN码不完整，不能入库登记');
     }
 
@@ -27,9 +29,11 @@ export class BatteryService {
       throw new BadRequestException('电池包编号已存在');
     }
 
+    const initialStatus = isPendingVin ? BatteryStatus.PENDING_VIN : BatteryStatus.REGISTERED;
+
     const battery = new this.batteryModel({
       ...dto,
-      status: BatteryStatus.REGISTERED,
+      status: initialStatus,
       receiver: dto.receiver || operator,
       receiveDate: dto.receiveDate || new Date(),
       isInspectionLocked: false,
@@ -43,8 +47,8 @@ export class BatteryService {
       FlowEventType.REGISTER,
       operator,
       {
-        toStatus: BatteryStatus.REGISTERED,
-        remark: '入厂登记',
+        toStatus: initialStatus,
+        remark: isPendingVin ? '入厂登记（VIN待补录）' : '入厂登记',
         afterData: savedBattery.toObject(),
       },
     );
@@ -56,6 +60,46 @@ export class BatteryService {
     }
 
     return savedBattery;
+  }
+
+  async supplementVin(id: string, dto: SupplementVinDto, operator: string): Promise<BatteryDocument> {
+    const battery = await this.findById(id);
+
+    if (battery.status !== BatteryStatus.PENDING_VIN) {
+      throw new BadRequestException('该电池包状态不是待补录VIN，无需补录');
+    }
+
+    if (!this.validateVin(dto.vin)) {
+      throw new BadRequestException('VIN码格式不正确，需17位有效字符');
+    }
+
+    const beforeData = battery.toObject();
+
+    battery.vin = dto.vin;
+    battery.status = BatteryStatus.REGISTERED;
+    const updatedBattery = await battery.save();
+
+    await this.flowService.recordEvent(
+      battery._id as Types.ObjectId,
+      battery.batteryCode,
+      FlowEventType.VIN_SUPPLEMENT,
+      operator,
+      {
+        fromStatus: BatteryStatus.PENDING_VIN,
+        toStatus: BatteryStatus.REGISTERED,
+        remark: 'VIN补录完成',
+        beforeData,
+        afterData: updatedBattery.toObject(),
+      },
+    );
+
+    try {
+      await this.auditService.syncBattery(updatedBattery);
+    } catch (error) {
+      console.error('Failed to sync battery to audit:', error);
+    }
+
+    return updatedBattery;
   }
 
   async findById(id: string): Promise<BatteryDocument> {
@@ -118,20 +162,36 @@ export class BatteryService {
     }
 
     const beforeData = battery.toObject();
+    let statusChanged = false;
+
+    if (battery.status === BatteryStatus.PENDING_VIN && dto.vin) {
+      if (!this.validateVin(dto.vin)) {
+        throw new BadRequestException('VIN码格式不正确，需17位有效字符');
+      }
+      battery.status = BatteryStatus.REGISTERED;
+      statusChanged = true;
+    }
 
     battery.set(dto);
     const updatedBattery = await battery.save();
 
+    const extraEventData: Record<string, any> = {
+      remark: statusChanged ? '修改登记信息并补录VIN' : '修改登记信息',
+      beforeData,
+      afterData: updatedBattery.toObject(),
+    };
+
+    if (statusChanged) {
+      extraEventData.fromStatus = BatteryStatus.PENDING_VIN;
+      extraEventData.toStatus = BatteryStatus.REGISTERED;
+    }
+
     await this.flowService.recordEvent(
       battery._id as Types.ObjectId,
       battery.batteryCode,
-      FlowEventType.MODIFY,
+      statusChanged ? FlowEventType.VIN_SUPPLEMENT : FlowEventType.MODIFY,
       operator,
-      {
-        remark: '修改登记信息',
-        beforeData,
-        afterData: updatedBattery.toObject(),
-      },
+      extraEventData,
     );
 
     try {
@@ -152,6 +212,11 @@ export class BatteryService {
     extraData?: Record<string, any>,
   ): Promise<BatteryDocument> {
     const battery = await this.findById(id);
+
+    if (battery.status === BatteryStatus.PENDING_VIN) {
+      throw new BadRequestException('该电池包VIN待补录，需先补录VIN才能继续流转');
+    }
+
     const beforeData = battery.toObject();
     const fromStatus = battery.status;
 
@@ -185,8 +250,9 @@ export class BatteryService {
   }
 
   async getStatistics(): Promise<Record<string, number>> {
-    const [total, registered, inspecting, qualified, unqualified, forSale, sold] = await Promise.all([
+    const [total, pendingVin, registered, inspecting, qualified, unqualified, forSale, sold] = await Promise.all([
       this.batteryModel.countDocuments().exec(),
+      this.batteryModel.countDocuments({ status: BatteryStatus.PENDING_VIN }).exec(),
       this.batteryModel.countDocuments({ status: BatteryStatus.REGISTERED }).exec(),
       this.batteryModel.countDocuments({ status: BatteryStatus.INSPECTING }).exec(),
       this.batteryModel.countDocuments({ status: BatteryStatus.QUALIFIED }).exec(),
@@ -197,6 +263,7 @@ export class BatteryService {
 
     return {
       total,
+      pendingVin,
       registered,
       inspecting,
       qualified,

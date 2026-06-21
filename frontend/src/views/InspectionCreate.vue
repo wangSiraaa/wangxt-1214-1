@@ -34,6 +34,18 @@ const safetyLevelOptions = [
   { label: 'D级 - 不合格', value: 'D' },
 ]
 
+const statusLabelMap: Record<string, string> = {
+  pending_vin: '待补录VIN',
+  registered: '待检测',
+  inspecting: '检测中',
+  qualified: '合格',
+  unqualified: '不合格',
+  for_sale: '待售',
+  sold: '已销售',
+  shipped: '已发货',
+  disassembling: '拆解中',
+}
+
 async function searchBattery() {
   if (!form.value.batteryCode) {
     alert('请输入电池包编号')
@@ -45,6 +57,14 @@ async function searchBattery() {
     const res: any = await getBatteryByCode(form.value.batteryCode)
     batteryInfo.value = res.data
     form.value.batteryId = res.data._id
+
+    if (res.data.status === 'pending_vin') {
+      alert('该电池包VIN待补录，需先补录VIN才能进行安全分级检测')
+      batteryInfo.value = null
+      form.value.batteryId = ''
+      searching.value = false
+      return
+    }
 
     if (res.data.isInspectionLocked) {
       alert('该电池包已进入梯次出库，不能再录入或修改检测结论')
@@ -154,7 +174,7 @@ function handleCancel() {
           </div>
           <div style="font-size: 13px; color: #64748b">
             当前状态：<span :class="'status-tag status-' + batteryInfo.status">
-              {{ batteryInfo.status }}
+              {{ statusLabelMap[batteryInfo.status] || batteryInfo.status }}
             </span>
           </div>
         </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { registerBattery } from '@/api/battery'
 
@@ -20,6 +20,7 @@ const form = ref({
 })
 
 const loading = ref(false)
+const loadingPending = ref(false)
 
 function validateVin(vin: string): boolean {
   if (!vin || vin.length < 17) {
@@ -29,23 +30,28 @@ function validateVin(vin: string): boolean {
   return vinRegex.test(vin)
 }
 
+const vinValid = computed(() => validateVin(form.value.vin))
+
 async function handleSubmit() {
   if (!form.value.batteryCode) {
     alert('请输入电池包编号')
     return
   }
   if (!form.value.vin) {
-    alert('请输入VIN码')
+    alert('请输入VIN码，或点击"保存待补录"')
     return
   }
-  if (!validateVin(form.value.vin)) {
+  if (!vinValid.value) {
     alert('VIN码不完整（需17位有效字符），不能入库登记')
     return
   }
 
   loading.value = true
   try {
-    const res: any = await registerBattery(form.value)
+    const res: any = await registerBattery({
+      ...form.value,
+      saveMode: 'register',
+    })
     alert('登记成功！')
     router.push('/battery')
   } catch (error: any) {
@@ -53,6 +59,28 @@ async function handleSubmit() {
     alert(error?.response?.data?.message || '登记失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function handleSavePending() {
+  if (!form.value.batteryCode) {
+    alert('请输入电池包编号')
+    return
+  }
+
+  loadingPending.value = true
+  try {
+    const res: any = await registerBattery({
+      ...form.value,
+      saveMode: 'pending_vin',
+    })
+    alert('已保存为待补录状态，后续可在电池包列表中补录VIN码')
+    router.push('/battery')
+  } catch (error: any) {
+    console.error('Failed to save pending:', error)
+    alert(error?.response?.data?.message || '保存失败')
+  } finally {
+    loadingPending.value = false
   }
 }
 
@@ -65,9 +93,13 @@ function handleCancel() {
   <div class="page-card">
     <div class="section-title">入厂登记</div>
     <div style="max-width: 800px; margin: 0 auto">
-      <div style="background: #eff6ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; color: #1d4ed8; font-size: 13px">
-        <i class="pi pi-info-circle" style="margin-right: 6px"></i>
-        VIN码必须完整（17位有效字符）才能入库登记
+      <div v-if="!vinValid" style="background: #fff7ed; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; color: #c2410c; font-size: 13px">
+        <i class="pi pi-exclamation-triangle" style="margin-right: 6px"></i>
+        VIN码尚未填写或格式不正确（需17位有效字符）。您可先点击"保存待补录"，后续补录VIN后再继续流转。
+      </div>
+      <div v-else style="background: #eff6ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; color: #1d4ed8; font-size: 13px">
+        <i class="pi pi-check-circle" style="margin-right: 6px"></i>
+        VIN码已完整填写，可直接入库登记
       </div>
 
       <div class="section-title" style="font-size: 14px; margin-bottom: 16px">基本信息</div>
@@ -80,7 +112,7 @@ function handleCancel() {
         </div>
         <div>
           <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">
-            VIN码 <span style="color: #ef4444">*</span>
+            VIN码 <span v-if="vinValid" style="color: #16a34a">（已完整）</span><span v-else style="color: #f97316">（待补录可跳过）</span>
           </label>
           <InputText v-model="form.vin" placeholder="请输入17位VIN码" style="width: 100%" />
         </div>
@@ -111,33 +143,34 @@ function handleCancel() {
       <div class="section-title" style="font-size: 14px; margin: 24px 0 16px 0">规格参数</div>
       <div class="form-row-3">
         <div>
-          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">标称容量(Ah)</label>
+          <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 6px">标称容量(Ah)</label>
           <InputNumber v-model="form.nominalCapacity" placeholder="请输入" style="width: 100%" />
         </div>
         <div>
-          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">标称电压(V)</label>
+          <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 6px">标称电压(V)</label>
           <InputNumber v-model="form.nominalVoltage" placeholder="请输入" style="width: 100%" />
         </div>
         <div>
-          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">包件数量</label>
+          <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 6px">包件数量</label>
           <InputNumber v-model="form.packageCount" placeholder="请输入" style="width: 100%" />
         </div>
       </div>
 
       <div class="form-row">
         <div>
-          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">重量(kg)</label>
+          <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 6px">重量(kg)</label>
           <InputNumber v-model="form.weight" placeholder="请输入" style="width: 100%" />
         </div>
         <div>
-          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">备注</label>
+          <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 6px">备注</label>
           <InputText v-model="form.remark" placeholder="请输入备注" style="width: 100%" />
         </div>
       </div>
 
       <div class="form-actions">
         <Button label="取消" class="p-button-secondary" @click="handleCancel" />
-        <Button label="提交登记" :loading="loading" @click="handleSubmit" />
+        <Button label="保存待补录" :loading="loadingPending" class="p-button-warning" @click="handleSavePending" />
+        <Button label="提交登记" :loading="loading" :disabled="!vinValid" @click="handleSubmit" />
       </div>
     </div>
   </div>

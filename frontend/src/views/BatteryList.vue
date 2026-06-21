@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getBatteryList } from '@/api/battery'
+import { getBatteryList, supplementVin } from '@/api/battery'
 import type { Battery } from '@/api/battery'
 
 const router = useRouter()
@@ -21,6 +21,7 @@ const searchParams = ref({
 
 const statusOptions = [
   { label: '全部', value: '' },
+  { label: '待补录VIN', value: 'pending_vin' },
   { label: '已登记', value: 'registered' },
   { label: '检测中', value: 'inspecting' },
   { label: '检测合格', value: 'qualified' },
@@ -38,6 +39,14 @@ const safetyLevelOptions = [
   { label: 'C级', value: 'C' },
   { label: 'D级', value: 'D' },
 ]
+
+const supplementDialogVisible = ref(false)
+const supplementForm = ref({
+  _id: '',
+  batteryCode: '',
+  vin: '',
+})
+const supplementLoading = ref(false)
 
 onMounted(() => {
   loadData()
@@ -85,6 +94,7 @@ function goToRegister() {
 
 function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
+    pending_vin: '待补录VIN',
     registered: '已登记',
     inspecting: '检测中',
     qualified: '检测合格',
@@ -105,6 +115,47 @@ function formatDate(date: any): string {
   if (!date) return '-'
   const d = new Date(date)
   return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function openSupplementDialog(battery: Battery) {
+  supplementForm.value = {
+    _id: battery._id || '',
+    batteryCode: battery.batteryCode,
+    vin: '',
+  }
+  supplementDialogVisible.value = true
+}
+
+function validateVin(vin: string): boolean {
+  if (!vin || vin.length !== 17) {
+    return false
+  }
+  const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/i
+  return vinRegex.test(vin)
+}
+
+async function handleSupplementVin() {
+  if (!supplementForm.value.vin) {
+    alert('请输入VIN码')
+    return
+  }
+  if (!validateVin(supplementForm.value.vin)) {
+    alert('VIN码格式不正确，需17位有效字符')
+    return
+  }
+
+  supplementLoading.value = true
+  try {
+    await supplementVin(supplementForm.value._id, { vin: supplementForm.value.vin })
+    alert('VIN补录成功！')
+    supplementDialogVisible.value = false
+    loadData()
+  } catch (error: any) {
+    console.error('Failed to supplement VIN:', error)
+    alert(error?.response?.data?.message || '补录失败')
+  } finally {
+    supplementLoading.value = false
+  }
 }
 </script>
 
@@ -151,9 +202,14 @@ function formatDate(date: any): string {
       currentPageReportTemplate="共 {totalRecords} 条记录"
     >
       <Column field="batteryCode" header="电池包编号" style="width: 140px"></Column>
-      <Column field="vin" header="VIN码" style="width: 180px"></Column>
+      <Column field="vin" header="VIN码" style="width: 180px">
+        <template #body="slotProps">
+          <span v-if="slotProps.data.vin">{{ slotProps.data.vin }}</span>
+          <span v-else style="color: #f97316; font-style: italic">待补录</span>
+        </template>
+      </Column>
       <Column field="vehiclePlate" header="车牌号" style="width: 100px"></Column>
-      <Column header="状态" style="width: 100px">
+      <Column header="状态" style="width: 110px">
         <template #body="slotProps">
           <span :class="getStatusClass(slotProps.data.status)">
             {{ getStatusLabel(slotProps.data.status) }}
@@ -184,6 +240,46 @@ function formatDate(date: any): string {
           {{ formatDate(slotProps.data.receiveDate) }}
         </template>
       </Column>
+      <Column header="操作" style="width: 100px">
+        <template #body="slotProps">
+          <Button
+            v-if="slotProps.data.status === 'pending_vin'"
+            label="补录VIN"
+            icon="pi pi-pencil"
+            class="p-button-warning p-button-sm"
+            @click="openSupplementDialog(slotProps.data)"
+          />
+        </template>
+      </Column>
     </DataTable>
+
+    <Dialog
+      v-model:visible="supplementDialogVisible"
+      header="VIN补录"
+      :modal="true"
+      :closable="true"
+      style="width: 480px"
+    >
+      <div style="padding: 8px 0">
+        <div style="background: #fff7ed; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; color: #c2410c; font-size: 13px">
+          <i class="pi pi-info-circle" style="margin-right: 6px"></i>
+          补录VIN后，电池包将从"待补录VIN"状态转为"已登记"，可继续后续检测和销售流程
+        </div>
+        <div style="margin-bottom: 14px">
+          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">电池包编号</label>
+          <InputText v-model="supplementForm.batteryCode" disabled style="width: 100%" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 13px; color: #475569; margin-bottom: 6px">
+            VIN码 <span style="color: #ef4444">*</span>
+          </label>
+          <InputText v-model="supplementForm.vin" placeholder="请输入17位VIN码" style="width: 100%" maxlength="17" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="取消" class="p-button-secondary" @click="supplementDialogVisible = false" />
+        <Button label="确认补录" :loading="supplementLoading" @click="handleSupplementVin" />
+      </template>
+    </Dialog>
   </div>
 </template>

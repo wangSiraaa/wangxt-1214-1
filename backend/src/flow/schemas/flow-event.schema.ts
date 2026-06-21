@@ -5,6 +5,7 @@ export type FlowEventDocument = FlowEvent & Document;
 
 export enum FlowEventType {
   REGISTER = 'register',
+  VIN_SUPPLEMENT = 'vin_supplement',
   INSPECTION_START = 'inspection_start',
   INSPECTION_COMPLETE = 'inspection_complete',
   QUALIFIED = 'qualified',
